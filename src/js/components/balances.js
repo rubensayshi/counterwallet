@@ -311,8 +311,6 @@ function CreateNewAddressModalViewModel() {
     self.validationModel.errors.showAllMessages(false);
   }
 
-  console.log(self);
-  
   self.submitForm = function() {
     if (self.addressType() == 'armory' && self.watchAddress.isValidating()) {
       setTimeout(function() { //wait a bit and call again
@@ -359,12 +357,7 @@ function CreateNewAddressModalViewModel() {
       newAddress = self.watchAddress();
     }
 
-    console.log(newAddress, pubKeys);
-
     newAddress = WALLET.addAddress(self.addressType(), newAddress, pubKeys);
-
-
-    console.log(newAddress, self.multisigPubkeys());
 
     //update PREFs
     var newAddressHash = hashToB64(newAddress);
