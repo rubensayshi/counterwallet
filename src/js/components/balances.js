@@ -1031,7 +1031,7 @@ function SweepModalViewModel() {
     var onTransactionCreated = function(unsignedTxHex, numTotalEndpoints, numConsensusEndpoints) {    
       cwk.checkAndSignRawTransaction(unsignedTxHex, [self.addressForPrivateKey()], function(err, signedHex) {
         if (err) {
-          return onBroadcastError(err);
+          return onTransactionSignError(err);
         }
 
         WALLET.broadcastSignedTx(signedHex, onTransactionBroadcasted, onBroadcastError);
@@ -1050,6 +1050,9 @@ function SweepModalViewModel() {
     var onConsensusError = onTransactionError;
     var onSysError = onTransactionError;
     var onBroadcastError = onTransactionError;
+    var onTransactionSignError = function(err) {
+      bootbox.alert(err.message || err);
+    };
 
     var message = i18n.t("sending_btc_for_sweeping_fees", normalizeQuantity(self.missingBtcForFees), self.addressForPrivateKeyForFees());
     self.sweepingProgressionMessage(message);
@@ -1083,13 +1086,15 @@ function SweepModalViewModel() {
       };
 
       var onTransactionError = function() {
-        if (arguments.length==4) {
+        if (arguments.length == 4) {
           var match = arguments[1].match(/Insufficient bitcoins at address [^\s]+\. \(Need approximately ([\d]+\.[\d]+) BTC/);
-          if (match!=null) {
+
+          if (match != null) {
             $.jqlog.debug(arguments[1]);
             // if insufficient bitcoins we retry with estimated fees return by counterpartyd
             var minEstimateFee = denormalizeQuantity(parseFloat(match[1])) - (self.btcBalanceForPrivateKey() - self.mergeCost);
             $.jqlog.debug('Insufficient fees. Need approximately ' + normalizeQuantity(minEstimateFee));
+
             if (minEstimateFee > self.btcBalanceForPrivateKey()) {
               self.shown(false);
               bootbox.alert(arguments[1]);
@@ -1103,15 +1108,17 @@ function SweepModalViewModel() {
             self.shown(false);
             bootbox.alert(arguments[1]);
           }
-          
-
         } else {
           bootbox.alert(i18n.t('consensus_error'));
         }
       }
+
       var onConsensusError = onTransactionError;
       var onSysError = onTransactionError;
       var onBroadcastError = onTransactionError;
+      var onTransactionSignError = function(err) {
+        bootbox.alert(err.message || err);
+      };
 
       var onTransactionBroadcasted = function(sendTxHash, endpoint) { //broadcast was successful
         // No need to display this transaction in notifications
@@ -1124,7 +1131,7 @@ function SweepModalViewModel() {
       var onTransactionCreated = function(unsignedTxHex, numTotalEndpoints, numConsensusEndpoints) {
         key.checkAndSignRawTransaction(unsignedTxHex, [self.addressForPrivateKey()], function(err, signedHex) {
           if (err) {
-            return onBroadcastError(err);
+            return onTransactionSignError(err);
           }
 
           WALLET.broadcastSignedTx(signedHex, onTransactionBroadcasted, onBroadcastError);
