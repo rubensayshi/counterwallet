@@ -29,7 +29,7 @@ var fixtures = {
       source: '2_muYJYjRZDPmTEMfyEGe34BGN8tZ6rmRZCu_mkvaJJCpMMjvhaHodDCvstZsZwTaWR4w3M_msj2PuwQRMWEmsi75GDcERXygw63BTRX7W_3',
       destination: 'muYJYjRZDPmTEMfyEGe34BGN8tZ6rmRZCu'
     }
-  }/*,
+  },
   livenet: {
     // @TODO: real fixtures for mainnet, for now the mainnet fixtures are the same as testnet, except different network
     network: "livenet",
@@ -47,5 +47,5 @@ var fixtures = {
       source: '1F2MFgLaQNLCTFCMWhffEG43GtxPxu6KWM',
       destination: '16Qd1F7qYLJfvTpBueEZ3yMYhwrsanPjSN'
     }
-  }*/
+  }
 }

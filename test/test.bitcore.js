@@ -1,11 +1,36 @@
 /* globals NETWORK */
 var should = chai.should();
 
+var setNetwork = function(network) {
+  if (typeof network !== "string") {
+    network = network.name;
+  }
+
+  // set the global NETWORK
+  NETWORK = bitcore.Networks[network];
+
+  // update GLOBAL USE_TESTNET
+  // note; does very little because many other things are constants that are already set based on this
+  switch (network) {
+    case 'livenet':
+      USE_TESTNET = false;
+      break;
+    case 'testnet':
+      USE_TESTNET = true;
+      break;
+  }
+
+  // update URLs
+  cwAPIUrls(jQuery.map(cwURLs(), function(element) {
+    return element + (USE_TESTNET ? '/_t_api' : '/_api');
+  }));
+};
+
 describe("CWBitcore", function() {
 
   // set the global NETWORK to the correct one for the test
   beforeEach(function() {
-    NETWORK = bitcore.Networks.testnet;
+    setNetwork(bitcore.Networks.testnet);
   });
 
   it("should be able to extract multisignature addresses from output script", function() {
@@ -34,7 +59,7 @@ describe("roobs", function() {
 
   // set the global NETWORK to the correct one for the test
   beforeEach(function() {
-    NETWORK = bitcore.Networks.livenet;
+    setNetwork(bitcore.Networks.livenet);
   });
 
   it("sign msig", function() {
@@ -243,7 +268,7 @@ Object.keys(fixtures).forEach(function(network) {
 
     // set the global NETWORK to the correct one for the test
     beforeEach(function() {
-      NETWORK = bitcore.Networks[data.network];
+      setNetwork(data.network);
     });
 
     describe(prefix + 'HierarchicalKey addresses', function() {
@@ -408,116 +433,120 @@ Object.keys(fixtures).forEach(function(network) {
       });
     });
 
-    describe(prefix + 'Multi-Signature, send to 2of3', function() {
+    if (data.msigto2of3transaction) {
+      describe(prefix + 'Multi-Signature, send to 2of3', function () {
 
-      it('should be able to check transaction destination', function() {
-        var cwk = new CWPrivateKey(data.privkey);
+        it('should be able to check transaction destination', function () {
+          var cwk = new CWPrivateKey(data.privkey);
 
-        cwk.checkTransactionDest(data.msigto2of3transaction.unsigned, [data.msigto2of3transaction.destination]).should.be.true;
-        cwk.checkTransactionDest(data.msigto2of3transaction.signed, [data.msigto2of3transaction.destination]).should.be.true;
-      });
-
-      it('should correctly sign raw transaction', function(done) {
-        var cwk = new CWPrivateKey(data.privkey);
-
-        cwk.signRawTransaction(data.msigto2of3transaction.unsigned, function(err, signedHex) {
-          should.equal(err, null);
-          signedHex.should.equal(data.msigto2of3transaction.signed, "signed");
-
-          done();
+          cwk.checkTransactionDest(data.msigto2of3transaction.unsigned, [data.msigto2of3transaction.destination]).should.be.true;
+          cwk.checkTransactionDest(data.msigto2of3transaction.signed, [data.msigto2of3transaction.destination]).should.be.true;
         });
-      });
-    });
 
-    describe(prefix + 'Multi-Signature, send from 2of3', function() {
+        it('should correctly sign raw transaction', function (done) {
+          var cwk = new CWPrivateKey(data.privkey);
 
-      it('should be able to check transaction destination', function () {
-        // these are never done normally, but it doesn't hurt to test it
-        CWBitcore.checkTransactionDest(
-          data.msigfrom2of3transaction.unsigned,
-          [data.msigfrom2of3transaction.source],
-          [data.msigfrom2of3transaction.destination]
-        ).should.be.true;
-
-        CWBitcore.checkTransactionDest(
-          data.msigfrom2of3transaction.signed12,
-          [data.msigfrom2of3transaction.source],
-          [data.msigfrom2of3transaction.destination]
-        ).should.be.true;
-      });
-
-      it('should correctly sign raw transaction with key 1 and key 2', function (done) {
-        var hkey = new CWHierarchicalKey(data.passphrase);
-        var cwk1 = hkey.getAddressKey(0);
-        var cwk2 = hkey.getAddressKey(1);
-
-        cwk1.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
-          should.equal(err, null);
-
-          cwk2.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
+          cwk.signRawTransaction(data.msigto2of3transaction.unsigned, function (err, signedHex) {
             should.equal(err, null);
-
-            fullySignedTx.should.equal(data.msigfrom2of3transaction.signed12, "signed");
+            signedHex.should.equal(data.msigto2of3transaction.signed, "signed");
 
             done();
           });
         });
       });
+    }
 
-      it('should correctly sign raw transaction with key 1 and key 3', function (done) {
-        var hkey = new CWHierarchicalKey(data.passphrase);
-        var cwk1 = hkey.getAddressKey(0);
-        var cwk3 = hkey.getAddressKey(2);
+    if (data.msigfrom2of3transaction) {
+      describe(prefix + 'Multi-Signature, send from 2of3', function () {
 
-        cwk1.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
-          should.equal(err, null);
+        it('should be able to check transaction destination', function () {
+          // these are never done normally, but it doesn't hurt to test it
+          CWBitcore.checkTransactionDest(
+            data.msigfrom2of3transaction.unsigned,
+            [data.msigfrom2of3transaction.source],
+            [data.msigfrom2of3transaction.destination]
+          ).should.be.true;
 
-          cwk3.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
+          CWBitcore.checkTransactionDest(
+            data.msigfrom2of3transaction.signed12,
+            [data.msigfrom2of3transaction.source],
+            [data.msigfrom2of3transaction.destination]
+          ).should.be.true;
+        });
+
+        it('should correctly sign raw transaction with key 1 and key 2', function (done) {
+          var hkey = new CWHierarchicalKey(data.passphrase);
+          var cwk1 = hkey.getAddressKey(0);
+          var cwk2 = hkey.getAddressKey(1);
+
+          cwk1.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
             should.equal(err, null);
 
-            fullySignedTx.should.equal(data.msigfrom2of3transaction.signed13, "signed");
+            cwk2.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
+              should.equal(err, null);
 
-            done();
+              fullySignedTx.should.equal(data.msigfrom2of3transaction.signed12, "signed");
+
+              done();
+            });
+          });
+        });
+
+        it('should correctly sign raw transaction with key 1 and key 3', function (done) {
+          var hkey = new CWHierarchicalKey(data.passphrase);
+          var cwk1 = hkey.getAddressKey(0);
+          var cwk3 = hkey.getAddressKey(2);
+
+          cwk1.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
+            should.equal(err, null);
+
+            cwk3.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
+              should.equal(err, null);
+
+              fullySignedTx.should.equal(data.msigfrom2of3transaction.signed13, "signed");
+
+              done();
+            });
+          });
+        });
+
+        it('should correctly sign raw transaction with key 2 and key 3', function (done) {
+          var hkey = new CWHierarchicalKey(data.passphrase);
+          var cwk2 = hkey.getAddressKey(1);
+          var cwk3 = hkey.getAddressKey(2);
+
+          cwk2.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
+            should.equal(err, null);
+
+            cwk3.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
+              should.equal(err, null);
+
+              fullySignedTx.should.equal(data.msigfrom2of3transaction.signed23, "signed");
+
+              done();
+            });
+          });
+        });
+
+        it('should correctly sign raw transaction with key 1 and key 3 in reverse order', function (done) {
+          var hkey = new CWHierarchicalKey(data.passphrase);
+          var cwk1 = hkey.getAddressKey(0);
+          var cwk3 = hkey.getAddressKey(2);
+
+          cwk3.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
+            should.equal(err, null);
+
+            cwk1.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
+              should.equal(err, null);
+
+              fullySignedTx.should.equal(data.msigfrom2of3transaction.signed13, "signed");
+
+              done();
+            });
           });
         });
       });
-
-      it('should correctly sign raw transaction with key 2 and key 3', function (done) {
-        var hkey = new CWHierarchicalKey(data.passphrase);
-        var cwk2 = hkey.getAddressKey(1);
-        var cwk3 = hkey.getAddressKey(2);
-
-        cwk2.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
-          should.equal(err, null);
-
-          cwk3.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
-            should.equal(err, null);
-
-            fullySignedTx.should.equal(data.msigfrom2of3transaction.signed23, "signed");
-
-            done();
-          });
-        });
-      });
-
-      it('should correctly sign raw transaction with key 1 and key 3 in reverse order', function (done) {
-        var hkey = new CWHierarchicalKey(data.passphrase);
-        var cwk1 = hkey.getAddressKey(0);
-        var cwk3 = hkey.getAddressKey(2);
-
-        cwk3.signRawTransaction(data.msigfrom2of3transaction.unsigned, true, function (err, partiallySignedTx) {
-          should.equal(err, null);
-
-          cwk1.signRawTransaction(partiallySignedTx, function (err, fullySignedTx) {
-            should.equal(err, null);
-
-            fullySignedTx.should.equal(data.msigfrom2of3transaction.signed13, "signed");
-
-            done();
-          });
-        });
-      });
-    });
+    }
     
     describe(prefix + 'Misc', function() {
 
